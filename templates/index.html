@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Rock Paper Scissors</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d0d0d;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── top bar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      border-bottom: 1px solid #1e1e1e;
+      flex-shrink: 0;
+      gap: 16px;
+    }
+    .scoreboard {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .score-block { text-align: center; }
+    .score-val {
+      font-size: 1.7rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .score-who {
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #555;
+    }
+    .score-sep { font-size: 1.2rem; color: #2e2e2e; }
+    .draws { font-size: 0.75rem; color: #444; }
+
+    .topbar-btns { display: flex; gap: 8px; }
+
+    button {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      transition: opacity 0.12s, transform 0.1s;
+    }
+    button:active:not(:disabled) { transform: scale(0.96); }
+    button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    #auto-btn        { background: #22c55e; color: #000; min-width: 140px; }
+    #auto-btn.is-off { background: #1a1a1a; color: #666; border: 1px solid #2a2a2a; }
+    #play-btn        { background: #3b82f6; color: #fff; }
+    #reset-btn       { background: #1a1a1a; color: #666; border: 1px solid #2a2a2a; }
+
+    /* ── split screen ── */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+    }
+
+    /* camera */
+    .cam-panel {
+      position: relative;
+      background: #000;
+      overflow: hidden;
+      border-right: 1px solid #1e1e1e;
+    }
+    .cam-panel img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    #countdown {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14rem;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 0 80px rgba(0,0,0,0.9);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.08s;
+    }
+    #countdown.visible { opacity: 1; }
+
+    /* cpu panel */
+    .cpu-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      position: relative;
+      background: #0d0d0d;
+    }
+    .cpu-tag {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #3a3a3a;
+    }
+
+    #cpu-emoji {
+      font-size: 14rem;
+      line-height: 1;
+      transition: transform 0.15s;
+    }
+    #cpu-emoji.pop { transform: scale(1.15); }
+
+    #cpu-name {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #444;
+    }
+    #outcome {
+      font-size: 2.2rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      min-height: 2.8rem;
+    }
+    #outcome.win  { color: #4ade80; }
+    #outcome.lose { color: #f87171; }
+    #outcome.draw { color: #fbbf24; }
+
+    /* history strip */
+    .history {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      gap: 5px;
+      padding: 10px 14px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .history::-webkit-scrollbar { display: none; }
+    .chip {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .chip.win  { background: #14532d; color: #4ade80; }
+    .chip.lose { background: #450a0a; color: #f87171; }
+    .chip.draw { background: #2d2000; color: #fbbf24; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="scoreboard">
+      <div class="score-block">
+        <div class="score-val" id="s-player">0</div>
+        <div class="score-who">Ty</div>
+      </div>
+      <div class="score-sep">:</div>
+      <div class="score-block">
+        <div class="score-val" id="s-cpu">0</div>
+        <div class="score-who">CPU</div>
+      </div>
+      <div class="draws" id="draws">Remisy: 0</div>
+    </div>
+    <div class="topbar-btns">
+      <button id="auto-btn" class="is-off" onclick="toggleAuto()">⟳&nbsp; AUTOPLAY</button>
+      <button id="play-btn" onclick="playOnce()">▶&nbsp; ZAGRAJ RAZ</button>
+      <button id="reset-btn" onclick="resetGame()">↺&nbsp; NOWA GRA</button>
+    </div>
+  </div>
+
+  <main>
+    <div class="cam-panel">
+      <img src="/video_feed" alt="kamera">
+      <div id="countdown"></div>
+    </div>
+
+    <div class="cpu-panel">
+      <span class="cpu-tag">Komputer wybrał</span>
+      <div id="cpu-emoji">?</div>
+      <div id="cpu-name"></div>
+      <div id="outcome"></div>
+      <div class="history" id="history"></div>
+    </div>
+  </main>
+
+  <script>
+    const EMOJI  = { rock: '✊', paper: '🖐️', scissors: '✌️' };
+    const LABEL  = { win: 'WYGRAŁEŚ!', lose: 'PRZEGRAŁEŚ', draw: 'REMIS' };
+    const sleep  = ms => new Promise(r => setTimeout(r, ms));
+
+    let autoplaying = false;
+    let running = false;
+
+    // ── countdown overlay ──
+    function setCountdown(text) {
+      const el = document.getElementById('countdown');
+      el.textContent = text;
+      el.classList.toggle('visible', text !== '');
+    }
+
+    // ── one full round ──
+    async function runRound() {
+      for (let i = 3; i >= 1; i--) {
+        setCountdown(i);
+        await sleep(1000);
+      }
+      setCountdown('GO!');
+      await sleep(400);
+      setCountdown('');
+
+      // clear cpu panel while waiting
+      setCpu('?', '', '');
+
+      try {
+        const res  = await fetch('/api/play', { method: 'POST' });
+        const data = await res.json();
+
+        if (data.error === 'no_gesture') {
+          setCpu('🤷', '', 'Brak dłoni — pokaż rękę');
+          return;
+        }
+
+        setCpu(EMOJI[data.computer], data.computer.toUpperCase(),
+               LABEL[data.outcome], data.outcome);
+        updateScores(data.scores);
+        addChip(data);
+      } catch { /* sieć – spróbuj znowu */ }
+    }
+
+    // ── autoplay ──
+    async function toggleAuto() {
+      const btn = document.getElementById('auto-btn');
+      if (autoplaying) {
+        autoplaying = false;
+        btn.textContent = '⟳  AUTOPLAY';
+        btn.classList.add('is-off');
+        document.getElementById('play-btn').disabled = false;
+      } else {
+        autoplaying = true;
+        btn.textContent = '⏹  STOP';
+        btn.classList.remove('is-off');
+        document.getElementById('play-btn').disabled = true;
+
+        while (autoplaying) {
+          await runRound();
+          if (autoplaying) await sleep(1500);
+        }
+      }
+    }
+
+    // ── manual single round ──
+    async function playOnce() {
+      if (running) return;
+      running = true;
+      document.getElementById('play-btn').disabled = true;
+      await runRound();
+      document.getElementById('play-btn').disabled = false;
+      running = false;
+    }
+
+    // ── reset ──
+    async function resetGame() {
+      autoplaying = false;
+      const ab = document.getElementById('auto-btn');
+      ab.textContent = '⟳  AUTOPLAY';
+      ab.classList.add('is-off');
+      document.getElementById('play-btn').disabled = false;
+
+      await fetch('/api/reset', { method: 'POST' });
+      updateScores({ player: 0, computer: 0, draws: 0 });
+      document.getElementById('history').innerHTML = '';
+      setCpu('?', '', '');
+    }
+
+    // ── helpers ──
+    function setCpu(emoji, name, outcomeText, outcomeClass = '') {
+      const em = document.getElementById('cpu-emoji');
+      em.textContent = emoji;
+      // quick pop animation on reveal
+      if (emoji !== '?' && emoji !== '🤷') {
+        em.classList.remove('pop');
+        void em.offsetWidth;
+        em.classList.add('pop');
+        setTimeout(() => em.classList.remove('pop'), 150);
+      }
+      document.getElementById('cpu-name').textContent = name;
+      const ol = document.getElementById('outcome');
+      ol.textContent = outcomeText;
+      ol.className = outcomeClass;
+    }
+
+    function updateScores(s) {
+      document.getElementById('s-player').textContent = s.player;
+      document.getElementById('s-cpu').textContent    = s.computer;
+      document.getElementById('draws').textContent    = `Remisy: ${s.draws}`;
+    }
+
+    function addChip(data) {
+      const strip = document.getElementById('history');
+      const chip  = document.createElement('div');
+      chip.className = `chip ${data.outcome}`;
+      chip.textContent = `${EMOJI[data.player]}vs${EMOJI[data.computer]}`;
+      strip.appendChild(chip);
+      while (strip.children.length > 14) strip.removeChild(strip.firstChild);
+      strip.scrollLeft = strip.scrollWidth;
+    }
+  </script>
+</body>
+</html>

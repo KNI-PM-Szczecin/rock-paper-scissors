@@ -1,0 +1,23 @@
+# środowisko
+.venv/
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# dane treningowe (pobierz przez download_dataset.py)
+data/
+
+# wytrenowany model (wygeneruj przez train.py)
+models/*.pth
+
+# model MediaPipe (pobierz — patrz README)
+hand_landmarker.task
+
+# macOS
+.DS_Store
+
+# Claude
+.claude/

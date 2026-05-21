@@ -1,0 +1,15 @@
+[project]
+name = "paper-rock-scissors"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "torch>=2.0",
+    "torchvision>=0.15",
+    "opencv-python>=4.8",
+    "pillow>=10.0",
+    "matplotlib>=3.7",
+    "mediapipe>=0.10.35",
+    "flask>=3.1.3",
+]
