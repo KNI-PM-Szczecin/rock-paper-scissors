@@ -53,6 +53,7 @@ jobs:
         run: |
           uv run pyinstaller --onefile --console --name rock-paper-scissors \
             --add-data "templates${{ matrix.separator }}templates" \
+            --add-data "assets${{ matrix.separator }}assets" \
             --add-data "hand_landmarker.task${{ matrix.separator }}." \
             --collect-all mediapipe \
             --collect-all flask \
