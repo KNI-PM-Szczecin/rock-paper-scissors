@@ -62,7 +62,7 @@ print("Press R to reset the game/scores", flush=True)
 print("Press 0-9 to switch cameras", flush=True)
 print("Press +/- to scale GUI", flush=True)
 print("Press F1 for Default Mode", flush=True)
-print("Press F2 for Best of Three (BO3) Mode", flush=True)
+print("Press F2 for Best of Three Mode", flush=True)
 
 cv2.namedWindow("Rock Paper Scissors", cv2.WINDOW_NORMAL)
 
@@ -79,25 +79,29 @@ except Exception as e:
     print(f"Warning: Could not load gesture icons: {e}", flush=True)
 
 font_title = None
+font_mode = None
 font_gesture = None
 font_countdown = None
 gesture_icons = {}
 shadow_offset = 4
 
 def update_gui_scale():
-    global font_title, font_gesture, font_countdown, gesture_icons, shadow_offset
+    global font_title, font_mode, font_gesture, font_countdown, gesture_icons, shadow_offset
     
     title_size = max(10, int(120 * scale_factor))
+    mode_size = max(10, int(60 * scale_factor))
     gesture_size = max(10, int(150 * scale_factor))
     countdown_size = max(10, int(350 * scale_factor))
     shadow_offset = max(1, int(4 * scale_factor))
     
     try:
         font_title = ImageFont.truetype(font_path, title_size)
+        font_mode = ImageFont.truetype(font_path, mode_size)
         font_gesture = ImageFont.truetype(font_path, gesture_size)
         font_countdown = ImageFont.truetype(font_path, countdown_size)
     except IOError:
         font_title = ImageFont.load_default()
+        font_mode = ImageFont.load_default()
         font_gesture = ImageFont.load_default()
         font_countdown = ImageFont.load_default()
         
@@ -123,6 +127,8 @@ outcome_color = (255, 255, 255)
 game_mode = "DEFAULT"
 score_player = 0
 score_computer = 0
+round_outcome_text = ""
+round_outcome_color = (255, 255, 255)
 
 while True:
     ret, frame = cap.read()
@@ -196,17 +202,23 @@ while True:
             elif game_mode == "BO3":
                 if round_res == "WIN":
                     score_player += 1
+                    round_outcome_text, round_outcome_color = "WYGRALES!", (0, 255, 0)
                 elif round_res == "LOSE":
                     score_computer += 1
+                    round_outcome_text, round_outcome_color = "PRZEGRALES", (255, 0, 0)
+                else:
+                    round_outcome_text, round_outcome_color = "REMIS", (255, 255, 0)
 
-                # Hide round text, only show the final outcome
+                # Hide center text, only show the final outcome there
                 outcome_text = ""
                 
                 # Check if someone won the BO3 set
                 if score_player >= 3:
                     outcome_text, outcome_color = "WYGRALES!", (0, 255, 0)
+                    round_outcome_text = ""
                 elif score_computer >= 3:
                     outcome_text, outcome_color = "PRZEGRALES", (255, 0, 0)
+                    round_outcome_text = ""
             
     elif state == "RESULT":
         elapsed = time.time() - result_start
@@ -214,6 +226,7 @@ while True:
             state = "WAITING"
             computer_gesture = "?"
             outcome_text = ""
+            round_outcome_text = ""
             
             # Reset scores for next BO3 match if someone reached 3
             if game_mode == "BO3" and (score_player >= 3 or score_computer >= 3):
@@ -276,11 +289,20 @@ while True:
         out_y = (h * 3) // 4 - out_h // 2 - bbox_out[1]
         draw_text_with_shadow(draw, (out_x, out_y), outcome_text, font=font_gesture, fill=outcome_color, offset=shadow_offset)
 
+    # Partial Round Outcome for BO3 (at the top)
+    if round_outcome_text:
+        bbox_rout = draw.textbbox((0, 0), round_outcome_text, font=font_title)
+        rout_w = bbox_rout[2] - bbox_rout[0]
+        rout_x = (w - rout_w) // 2
+        rout_y = padding
+        draw_text_with_shadow(draw, (rout_x, rout_y), round_outcome_text, font=font_title, fill=round_outcome_color, offset=shadow_offset)
+
     # Mode indicator (bottom left)
-    mode_text = "MODE-1 (DEFAULT)" if game_mode == "DEFAULT" else "MODE-2 (BO3)"
-    bbox_mode = draw.textbbox((0, 0), mode_text, font=font_title)
+    mode_text = "MODE-1 (DEFAULT)" if game_mode == "DEFAULT" else "MODE-2 (BestOfThree)"
+    bbox_mode = draw.textbbox((0, 0), mode_text, font=font_mode)
     mode_h = bbox_mode[3] - bbox_mode[1]
-    draw_text_with_shadow(draw, (padding, h - padding - mode_h), mode_text, font=font_title, fill=(180, 180, 180), offset=shadow_offset)
+    mode_y = h - padding - mode_h - int(40 * scale_factor)
+    draw_text_with_shadow(draw, (padding, mode_y), mode_text, font=font_mode, fill=(180, 180, 180), offset=shadow_offset)
 
     # Convert back to OpenCV
     frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
@@ -306,7 +328,7 @@ while True:
         game_mode = "BO3"
         score_player = 0
         score_computer = 0
-        print("Mode switched to Best of Three (BO3)", flush=True)
+        print("Mode switched to Best of Three", flush=True)
     elif char_key in (ord('-'), ord('_')):
         scale_factor = max(0.2, scale_factor - 0.1)
         update_gui_scale()
