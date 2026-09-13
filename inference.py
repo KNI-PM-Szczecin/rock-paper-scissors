@@ -15,6 +15,12 @@ def get_resource_path(relative_path):
         base_path = os.path.abspath(".")
     return Path(base_path) / relative_path
 
+def draw_text_with_shadow(draw, position, text, font, fill, shadow_color=(0, 0, 0), offset=4):
+    """Draws text with a simple drop shadow effect."""
+    x, y = position
+    draw.text((x + offset, y + offset), text, font=font, fill=shadow_color)
+    draw.text((x, y), text, font=font, fill=fill)
+
 LANDMARKER_PATH = get_resource_path("hand_landmarker.task")
 
 # tip and PIP indices for each finger (index, middle, ring, pinky)
@@ -153,18 +159,18 @@ while True:
     draw = ImageDraw.Draw(frame_pil)
 
     # Gracz
-    draw.text((20, 20), "Gracz:", font=font_title, fill=(255, 255, 255))
+    draw_text_with_shadow(draw, (20, 20), "Gracz:", font=font_title, fill=(255, 255, 255))
     player_color = (0, 230, 0) if player_gesture not in ["brak dloni", "?"] else (230, 140, 0)
-    draw.text((20, 110), player_gesture, font=font_gesture, fill=player_color)
+    draw_text_with_shadow(draw, (20, 110), player_gesture, font=font_gesture, fill=player_color)
 
     # Komputer
     bbox_title = draw.textbbox((0, 0), "Komputer:", font=font_title)
     comp_title_w = bbox_title[2] - bbox_title[0]
-    draw.text((w - comp_title_w - 20, 20), "Komputer:", font=font_title, fill=(255, 255, 255))
+    draw_text_with_shadow(draw, (w - comp_title_w - 20, 20), "Komputer:", font=font_title, fill=(255, 255, 255))
     
     bbox_gest = draw.textbbox((0, 0), computer_gesture, font=font_gesture)
     comp_gest_w = bbox_gest[2] - bbox_gest[0]
-    draw.text((w - comp_gest_w - 20, 110), computer_gesture, font=font_gesture, fill=(255, 0, 0))
+    draw_text_with_shadow(draw, (w - comp_gest_w - 20, 110), computer_gesture, font=font_gesture, fill=(255, 0, 0))
 
     # Countdown
     if state == "COUNTDOWN" and countdown_text:
@@ -173,7 +179,7 @@ while True:
         cd_h = bbox_cd[3] - bbox_cd[1]
         text_x = (w - cd_w) // 2
         text_y = (h - cd_h) // 2 - bbox_cd[1]
-        draw.text((text_x, text_y), countdown_text, font=font_countdown, fill=(255, 0, 0))
+        draw_text_with_shadow(draw, (text_x, text_y), countdown_text, font=font_countdown, fill=(255, 0, 0))
 
     # Outcome
     if outcome_text:
@@ -182,7 +188,7 @@ while True:
         out_h = bbox_out[3] - bbox_out[1]
         out_x = (w - out_w) // 2
         out_y = (h * 3) // 4 - out_h // 2 - bbox_out[1]
-        draw.text((out_x, out_y), outcome_text, font=font_gesture, fill=outcome_color)
+        draw_text_with_shadow(draw, (out_x, out_y), outcome_text, font=font_gesture, fill=outcome_color)
 
     # Convert back to OpenCV
     frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
