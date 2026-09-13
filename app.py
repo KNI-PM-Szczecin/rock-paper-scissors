@@ -7,10 +7,21 @@ import threading
 import random
 import time
 from pathlib import Path
+import sys
+import os
 
-app = Flask(__name__)
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return Path(base_path) / relative_path
 
-LANDMARKER_PATH = Path("hand_landmarker.task")
+app = Flask(__name__, template_folder=str(get_resource_path('templates')))
+
+LANDMARKER_PATH = get_resource_path("hand_landmarker.task")
 FINGERS = [(8, 6), (12, 10), (16, 14), (20, 18)]
 CHOICES = ["rock", "paper", "scissors"]
 WINS = {("rock", "scissors"), ("paper", "rock"), ("scissors", "paper")}

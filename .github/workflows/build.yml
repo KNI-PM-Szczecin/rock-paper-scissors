@@ -1,0 +1,68 @@
+name: Build with PyInstaller
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            separator: ';'
+            artifact_name: rock-paper-scissors-windows
+            executable: rock-paper-scissors.exe
+          - os: macos-latest
+            separator: ':'
+            artifact_name: rock-paper-scissors-macos
+            executable: rock-paper-scissors
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+          
+      - name: Download hand_landmarker.task
+        shell: bash
+        run: |
+          curl -L -o hand_landmarker.task "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
+
+      - name: Install dependencies
+        run: |
+          uv sync
+          uv pip install pyinstaller pyinstaller-hooks-contrib
+
+      - name: Build executable
+        shell: bash
+        run: |
+          uv run pyinstaller --onefile --console --name rock-paper-scissors \
+            --add-data "templates${{ matrix.separator }}templates" \
+            --add-data "hand_landmarker.task${{ matrix.separator }}." \
+            --collect-all mediapipe \
+            --collect-all flask \
+            --hidden-import jinja2 \
+            --hidden-import werkzeug \
+            --hidden-import cv2 \
+            inference.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.executable }}

@@ -3,8 +3,17 @@ import mediapipe as mp
 from mediapipe.tasks.python import BaseOptions
 from mediapipe.tasks.python.vision import HandLandmarker, HandLandmarkerOptions, RunningMode
 from pathlib import Path
+import sys
+import os
 
-LANDMARKER_PATH = Path("hand_landmarker.task")
+def get_resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return Path(base_path) / relative_path
+
+LANDMARKER_PATH = get_resource_path("hand_landmarker.task")
 
 # tip and PIP indices for each finger (index, middle, ring, pinky)
 FINGERS = [(8, 6), (12, 10), (16, 14), (20, 18)]
@@ -39,6 +48,8 @@ if not cap.isOpened():
     raise RuntimeError("Cannot open camera")
 
 print("Press Q to quit")
+
+cv2.namedWindow("Rock Paper Scissors", cv2.WINDOW_NORMAL)
 
 timestamp_ms = 0
 
