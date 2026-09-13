@@ -196,13 +196,12 @@ while True:
             elif game_mode == "BO3":
                 if round_res == "WIN":
                     score_player += 1
-                    outcome_text, outcome_color = "+1 PUNKT", (0, 255, 0)
                 elif round_res == "LOSE":
                     score_computer += 1
-                    outcome_text, outcome_color = "+1 DLA KOMPUTERA", (255, 0, 0)
-                else:
-                    outcome_text, outcome_color = "REMIS", (255, 255, 0)
 
+                # Hide round text, only show the final outcome
+                outcome_text = ""
+                
                 # Check if someone won the BO3 set
                 if score_player >= 3:
                     outcome_text, outcome_color = "WYGRALES!", (0, 255, 0)
@@ -239,7 +238,7 @@ while True:
         frame_pil.paste(gesture_icons[player_gesture], (padding, y_icon), mask=gesture_icons[player_gesture])
     if game_mode == "BO3":
         y_score = y_icon + int(130 * scale_factor)
-        draw_text_with_shadow(draw, (padding, y_score), f"Wynik: {score_player}", font=font_title, fill=(255, 255, 0), offset=shadow_offset)
+        draw_text_with_shadow(draw, (padding, y_score), f"Wygrane: {score_player}/3", font=font_title, fill=(255, 255, 0), offset=shadow_offset)
 
     # Komputer
     bbox_title = draw.textbbox((0, 0), "Komputer:", font=font_title)
@@ -254,7 +253,7 @@ while True:
         frame_pil.paste(gesture_icons[computer_gesture], (w - icon_w - padding, y_icon), mask=gesture_icons[computer_gesture])
     if game_mode == "BO3":
         y_score = y_icon + int(130 * scale_factor)
-        score_txt = f"Wynik: {score_computer}"
+        score_txt = f"Wygrane: {score_computer}/3"
         bbox_sc = draw.textbbox((0, 0), score_txt, font=font_title)
         sc_w = bbox_sc[2] - bbox_sc[0]
         draw_text_with_shadow(draw, (w - sc_w - padding, y_score), score_txt, font=font_title, fill=(255, 255, 0), offset=shadow_offset)
@@ -277,6 +276,12 @@ while True:
         out_y = (h * 3) // 4 - out_h // 2 - bbox_out[1]
         draw_text_with_shadow(draw, (out_x, out_y), outcome_text, font=font_gesture, fill=outcome_color, offset=shadow_offset)
 
+    # Mode indicator (bottom left)
+    mode_text = "MODE-1 (DEFAULT)" if game_mode == "DEFAULT" else "MODE-2 (BO3)"
+    bbox_mode = draw.textbbox((0, 0), mode_text, font=font_title)
+    mode_h = bbox_mode[3] - bbox_mode[1]
+    draw_text_with_shadow(draw, (padding, h - padding - mode_h), mode_text, font=font_title, fill=(180, 180, 180), offset=shadow_offset)
+
     # Convert back to OpenCV
     frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
 
@@ -285,15 +290,14 @@ while True:
     key = cv2.waitKeyEx(1)
     char_key = key & 0xFF
     
-    if char_key == ord("q"):
+    if char_key in (ord('q'), ord('Q')):
         break
-    elif char_key == ord("r"):
+    elif char_key in (ord('r'), ord('R')):
         state = "WAITING"
         score_player = 0
         score_computer = 0
         computer_gesture = "?"
         outcome_text = ""
-        countdown_text = ""
         print("Game and scores reset.", flush=True)
     elif key in (65470, 63236, 0x700000, 7340032): # F1
         game_mode = "DEFAULT"
