@@ -57,7 +57,8 @@ cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     raise RuntimeError("Cannot open camera")
 
-print("Press Q to quit")
+print("Press Q to quit", flush=True)
+print("Press 0-9 to switch cameras", flush=True)
 
 cv2.namedWindow("Rock Paper Scissors", cv2.WINDOW_NORMAL)
 
@@ -71,6 +72,20 @@ except IOError:
     font_title = ImageFont.load_default()
     font_gesture = ImageFont.load_default()
     font_countdown = ImageFont.load_default()
+
+# Load and scale gesture icons
+gesture_icons = {}
+try:
+    icon_size = (120, 120)
+    rock_img = Image.open(get_resource_path("assets/images/rock.png")).convert("RGBA")
+    paper_img = Image.open(get_resource_path("assets/images/paper.png")).convert("RGBA")
+    scissors_img = Image.open(get_resource_path("assets/images/sizors.png")).convert("RGBA")
+    
+    gesture_icons["KAMIEN"] = rock_img.resize(icon_size, Image.Resampling.LANCZOS)
+    gesture_icons["PAPIER"] = paper_img.resize(icon_size, Image.Resampling.LANCZOS)
+    gesture_icons["NOZYCE"] = scissors_img.resize(icon_size, Image.Resampling.LANCZOS)
+except Exception as e:
+    print(f"Warning: Could not load gesture icons: {e}", flush=True)
 
 timestamp_ms = 0
 
@@ -162,6 +177,8 @@ while True:
     draw_text_with_shadow(draw, (20, 20), "Gracz:", font=font_title, fill=(255, 255, 255))
     player_color = (0, 230, 0) if player_gesture not in ["brak dloni", "?"] else (230, 140, 0)
     draw_text_with_shadow(draw, (20, 110), player_gesture, font=font_gesture, fill=player_color)
+    if player_gesture in gesture_icons:
+        frame_pil.paste(gesture_icons[player_gesture], (20, 230), mask=gesture_icons[player_gesture])
 
     # Komputer
     bbox_title = draw.textbbox((0, 0), "Komputer:", font=font_title)
@@ -171,6 +188,9 @@ while True:
     bbox_gest = draw.textbbox((0, 0), computer_gesture, font=font_gesture)
     comp_gest_w = bbox_gest[2] - bbox_gest[0]
     draw_text_with_shadow(draw, (w - comp_gest_w - 20, 110), computer_gesture, font=font_gesture, fill=(255, 0, 0))
+    if computer_gesture in gesture_icons:
+        icon_w, _ = gesture_icons[computer_gesture].size
+        frame_pil.paste(gesture_icons[computer_gesture], (w - icon_w - 20, 230), mask=gesture_icons[computer_gesture])
 
     # Countdown
     if state == "COUNTDOWN" and countdown_text:
@@ -195,8 +215,31 @@ while True:
 
     cv2.imshow("Rock Paper Scissors", frame)
 
-    if cv2.waitKey(1) & 0xFF == ord("q"):
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord("q"):
         break
+    elif ord('0') <= key <= ord('9'):
+        new_cam_idx = key - ord('0')
+        
+        # On Windows, using cv2.CAP_DSHOW can prevent hanging when querying invalid cameras.
+        # But for cross-platform simplicity and safety, we try normal capture first.
+        # In a real app we might use system APIs, but OpenCV handles invalid indices 
+        # by returning False from isOpened() or read()
+        new_cap = cv2.VideoCapture(new_cam_idx)
+        
+        if new_cap.isOpened():
+            # Check if it actually produces a frame
+            test_ret, _ = new_cap.read()
+            if test_ret:
+                cap.release()
+                cap = new_cap
+                print(f"Switched to camera {new_cam_idx}", flush=True)
+            else:
+                new_cap.release()
+                print(f"Camera {new_cam_idx} opened but cannot read frames.", flush=True)
+        else:
+            new_cap.release()
+            print(f"Camera {new_cam_idx} is not available.", flush=True)
 
 cap.release()
 cv2.destroyAllWindows()
