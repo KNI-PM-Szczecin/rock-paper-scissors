@@ -73,6 +73,9 @@ countdown_start = 0
 result_start = 0
 computer_gesture = "?"
 choices = ["KAMIEN", "PAPIER", "NOZYCE"]
+WINS = {("KAMIEN", "NOZYCE"), ("PAPIER", "KAMIEN"), ("NOZYCE", "PAPIER")}
+outcome_text = ""
+outcome_color = (255, 255, 255)
 
 while True:
     ret, frame = cap.read()
@@ -104,13 +107,17 @@ while True:
 
         player_gesture, n = classify(lm)
 
+    countdown_text = ""
+
     # GAME LOGIC
     if state == "WAITING":
         if player_gesture not in ["brak dloni", "?"]:
             state = "COUNTDOWN"
             countdown_start = time.time()
             computer_gesture = "?"
-    elif state == "COUNTDOWN":
+            outcome_text = ""
+            
+    if state == "COUNTDOWN":
         elapsed = time.time() - countdown_start
         if elapsed < 1.0:
             countdown_text = "3"
@@ -124,11 +131,22 @@ while True:
             computer_gesture = random.choice(choices)
             countdown_text = ""
             
+            if player_gesture == computer_gesture:
+                outcome_text = "REMIS"
+                outcome_color = (255, 255, 0) # Yellow
+            elif (player_gesture, computer_gesture) in WINS:
+                outcome_text = "WYGRALES!"
+                outcome_color = (0, 255, 0) # Green
+            else:
+                outcome_text = "PRZEGRALES"
+                outcome_color = (255, 0, 0) # Red
+            
     elif state == "RESULT":
         elapsed = time.time() - result_start
         if elapsed > 3.0: # hold result for 3 seconds
             state = "WAITING"
             computer_gesture = "?"
+            outcome_text = ""
 
     # DRAW UI WITH PILLOW
     frame_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
@@ -156,6 +174,15 @@ while True:
         text_x = (w - cd_w) // 2
         text_y = (h - cd_h) // 2 - bbox_cd[1]
         draw.text((text_x, text_y), countdown_text, font=font_countdown, fill=(255, 0, 0))
+
+    # Outcome
+    if outcome_text:
+        bbox_out = draw.textbbox((0, 0), outcome_text, font=font_gesture)
+        out_w = bbox_out[2] - bbox_out[0]
+        out_h = bbox_out[3] - bbox_out[1]
+        out_x = (w - out_w) // 2
+        out_y = (h * 3) // 4 - out_h // 2 - bbox_out[1]
+        draw.text((out_x, out_y), outcome_text, font=font_gesture, fill=outcome_color)
 
     # Convert back to OpenCV
     frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
