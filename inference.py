@@ -59,33 +59,52 @@ if not cap.isOpened():
 
 print("Press Q to quit", flush=True)
 print("Press 0-9 to switch cameras", flush=True)
+print("Press +/- to scale GUI", flush=True)
 
 cv2.namedWindow("Rock Paper Scissors", cv2.WINDOW_NORMAL)
 
-# Load custom font
+# GUI Scaling setup
+scale_factor = 1.0
 font_path = str(get_resource_path("assets/fonts/game_over.ttf"))
-try:
-    font_title = ImageFont.truetype(font_path, 120)
-    font_gesture = ImageFont.truetype(font_path, 150)
-    font_countdown = ImageFont.truetype(font_path, 350)
-except IOError:
-    font_title = ImageFont.load_default()
-    font_gesture = ImageFont.load_default()
-    font_countdown = ImageFont.load_default()
 
-# Load and scale gesture icons
-gesture_icons = {}
+raw_images = {}
 try:
-    icon_size = (120, 120)
-    rock_img = Image.open(get_resource_path("assets/images/rock.png")).convert("RGBA")
-    paper_img = Image.open(get_resource_path("assets/images/paper.png")).convert("RGBA")
-    scissors_img = Image.open(get_resource_path("assets/images/sizors.png")).convert("RGBA")
-    
-    gesture_icons["KAMIEN"] = rock_img.resize(icon_size, Image.Resampling.LANCZOS)
-    gesture_icons["PAPIER"] = paper_img.resize(icon_size, Image.Resampling.LANCZOS)
-    gesture_icons["NOZYCE"] = scissors_img.resize(icon_size, Image.Resampling.LANCZOS)
+    raw_images["KAMIEN"] = Image.open(get_resource_path("assets/images/rock.png")).convert("RGBA")
+    raw_images["PAPIER"] = Image.open(get_resource_path("assets/images/paper.png")).convert("RGBA")
+    raw_images["NOZYCE"] = Image.open(get_resource_path("assets/images/sizors.png")).convert("RGBA")
 except Exception as e:
     print(f"Warning: Could not load gesture icons: {e}", flush=True)
+
+font_title = None
+font_gesture = None
+font_countdown = None
+gesture_icons = {}
+shadow_offset = 4
+
+def update_gui_scale():
+    global font_title, font_gesture, font_countdown, gesture_icons, shadow_offset
+    
+    title_size = max(10, int(120 * scale_factor))
+    gesture_size = max(10, int(150 * scale_factor))
+    countdown_size = max(10, int(350 * scale_factor))
+    shadow_offset = max(1, int(4 * scale_factor))
+    
+    try:
+        font_title = ImageFont.truetype(font_path, title_size)
+        font_gesture = ImageFont.truetype(font_path, gesture_size)
+        font_countdown = ImageFont.truetype(font_path, countdown_size)
+    except IOError:
+        font_title = ImageFont.load_default()
+        font_gesture = ImageFont.load_default()
+        font_countdown = ImageFont.load_default()
+        
+    icon_w = max(10, int(120 * scale_factor))
+    icon_size = (icon_w, icon_w)
+    
+    for key, img in raw_images.items():
+        gesture_icons[key] = img.resize(icon_size, Image.Resampling.LANCZOS)
+
+update_gui_scale()
 
 timestamp_ms = 0
 
@@ -173,24 +192,30 @@ while True:
     frame_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(frame_pil)
 
+    # GUI Coordinates
+    padding = int(20 * scale_factor)
+    y_title = int(20 * scale_factor)
+    y_gest = int(110 * scale_factor)
+    y_icon = int(230 * scale_factor)
+
     # Gracz
-    draw_text_with_shadow(draw, (20, 20), "Gracz:", font=font_title, fill=(255, 255, 255))
+    draw_text_with_shadow(draw, (padding, y_title), "Gracz:", font=font_title, fill=(255, 255, 255), offset=shadow_offset)
     player_color = (0, 230, 0) if player_gesture not in ["brak dloni", "?"] else (230, 140, 0)
-    draw_text_with_shadow(draw, (20, 110), player_gesture, font=font_gesture, fill=player_color)
+    draw_text_with_shadow(draw, (padding, y_gest), player_gesture, font=font_gesture, fill=player_color, offset=shadow_offset)
     if player_gesture in gesture_icons:
-        frame_pil.paste(gesture_icons[player_gesture], (20, 230), mask=gesture_icons[player_gesture])
+        frame_pil.paste(gesture_icons[player_gesture], (padding, y_icon), mask=gesture_icons[player_gesture])
 
     # Komputer
     bbox_title = draw.textbbox((0, 0), "Komputer:", font=font_title)
     comp_title_w = bbox_title[2] - bbox_title[0]
-    draw_text_with_shadow(draw, (w - comp_title_w - 20, 20), "Komputer:", font=font_title, fill=(255, 255, 255))
+    draw_text_with_shadow(draw, (w - comp_title_w - padding, y_title), "Komputer:", font=font_title, fill=(255, 255, 255), offset=shadow_offset)
     
     bbox_gest = draw.textbbox((0, 0), computer_gesture, font=font_gesture)
     comp_gest_w = bbox_gest[2] - bbox_gest[0]
-    draw_text_with_shadow(draw, (w - comp_gest_w - 20, 110), computer_gesture, font=font_gesture, fill=(255, 0, 0))
+    draw_text_with_shadow(draw, (w - comp_gest_w - padding, y_gest), computer_gesture, font=font_gesture, fill=(255, 0, 0), offset=shadow_offset)
     if computer_gesture in gesture_icons:
         icon_w, _ = gesture_icons[computer_gesture].size
-        frame_pil.paste(gesture_icons[computer_gesture], (w - icon_w - 20, 230), mask=gesture_icons[computer_gesture])
+        frame_pil.paste(gesture_icons[computer_gesture], (w - icon_w - padding, y_icon), mask=gesture_icons[computer_gesture])
 
     # Countdown
     if state == "COUNTDOWN" and countdown_text:
@@ -199,7 +224,7 @@ while True:
         cd_h = bbox_cd[3] - bbox_cd[1]
         text_x = (w - cd_w) // 2
         text_y = (h - cd_h) // 2 - bbox_cd[1]
-        draw_text_with_shadow(draw, (text_x, text_y), countdown_text, font=font_countdown, fill=(255, 0, 0))
+        draw_text_with_shadow(draw, (text_x, text_y), countdown_text, font=font_countdown, fill=(255, 0, 0), offset=shadow_offset)
 
     # Outcome
     if outcome_text:
@@ -208,7 +233,7 @@ while True:
         out_h = bbox_out[3] - bbox_out[1]
         out_x = (w - out_w) // 2
         out_y = (h * 3) // 4 - out_h // 2 - bbox_out[1]
-        draw_text_with_shadow(draw, (out_x, out_y), outcome_text, font=font_gesture, fill=outcome_color)
+        draw_text_with_shadow(draw, (out_x, out_y), outcome_text, font=font_gesture, fill=outcome_color, offset=shadow_offset)
 
     # Convert back to OpenCV
     frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
@@ -218,6 +243,14 @@ while True:
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):
         break
+    elif key in (ord('-'), ord('_')):
+        scale_factor = max(0.2, scale_factor - 0.1)
+        update_gui_scale()
+        print(f"GUI Scale decreased to: {scale_factor:.1f}", flush=True)
+    elif key in (ord('+'), ord('=')):
+        scale_factor = min(5.0, scale_factor + 0.1)
+        update_gui_scale()
+        print(f"GUI Scale increased to: {scale_factor:.1f}", flush=True)
     elif ord('0') <= key <= ord('9'):
         new_cam_idx = key - ord('0')
         
