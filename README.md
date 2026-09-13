@@ -91,6 +91,20 @@ Gesty rozpoznawane przez kamerę:
 | Papier | 🖐️ |
 | Nożyce | ✌️ |
 
+### Sterowanie w aplikacji lokalnej (`inference.py` / plik `.exe`)
+
+W trybie wolnostojącego okna (uruchamianym przez `uv run python inference.py` lub jako zbudowany plik `.exe` / `.app`) dostępne są poniższe skróty klawiszowe:
+
+| Klawisz | Akcja |
+|---|---|
+| **0** - **9** | Przełączanie pomiędzy podłączonymi kamerami (indeksy systemowe). Niewykryte kamery są ignorowane. |
+| **-** / **_** | Zmniejszenie wielkości interfejsu (GUI). |
+| **+** / **=** | Zwiększenie wielkości interfejsu (GUI). |
+| **F1** | Przejście do trybu domyślnego (**Freeplay** - pojedyncze rundy). |
+| **F2** | Przejście do trybu turniejowego (**Best of Three / BO3** - gra do 3 zwycięstw). |
+| **R** | Twardy reset — natychmiastowe zerowanie wyniku i stanu aktualnej rundy. |
+| **Q** | Bezpieczne zamknięcie programu i zwolnienie zasobów kamery. |
+
 ---
 
 ## Struktura projektu
@@ -101,6 +115,9 @@ Gesty rozpoznawane przez kamerę:
 ├── train.py               # trening modelu (transfer learning, MobileNetV2)
 ├── inference.py           # standalone detekcja przez kamerę (bez przeglądarki)
 ├── download_dataset.py    # skrypt pobierający dataset
+├── assets/                # pliki multimedialne do renderowania HUD
+│   ├── fonts/             # niestandardowe czcionki UI (game_over.ttf)
+│   └── images/            # graficzne ikony dla gestów
 ├── templates/
 │   └── index.html         # interfejs webowy
 ├── models/                # tu trafia wytrenowany model (.pth)
